@@ -1,0 +1,57 @@
+% Metamodel of a general blockchain designed with Hyperledger Fabric - Fabric Network
+
+% let's use definitions of a channel & network inter-changeably
+class Channel {
+    % does it make sense to instantiate a channel with one organization only?
+    contains Organization[] organizations
+    contains Ledger[1] ledger opposite channel
+    contains Chaincode[] chaincode
+}
+
+% ledgers exist in the scope of channels
+class Ledger {
+    container Channel channel opposite ledger
+}
+scope Ledger = 1.
+
+% trusted member of the network
+% enrolled via adding its MSP (Membership Service Provider) to the network
+class Organization {
+    contains Peer[] peers opposite organization
+    contains OrderingService[] orderingServices opposite organization
+}
+
+abstract class Node.
+
+% network entity that maintains a ledger and runs chaincode containers
+class Peer extends Node {
+    container Organization organization opposite peers
+    contains Ledger[] ledger
+    contains Chaincode[] chaincode
+}
+
+class OrderingService extends Node {
+    container Organization organization opposite orderingServices
+}
+
+class ClientApplication extends Node {
+    Chaincode[] transactionInvokation
+}
+
+% provides a communication bridge between an external (to the blockchain) application and a ledger
+class Chaincode {
+    contains EndorsementPolicy[] customEndoresementPolicy
+}
+
+% defines logical existence of a channel
+abstract class Configuration.
+
+% lists the definition of the organizations and policies that will define roles of the organizations in the channel
+class ConfigurationBlock extends Configuration {
+    Organization[1..*] participantOrganizations
+    contains EndorsementPolicy[1] defaultEndoresementPolicy
+}
+
+abstract class Policy.
+class EndorsementPolicy extends Policy.
+

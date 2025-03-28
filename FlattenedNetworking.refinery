@@ -1,0 +1,61 @@
+% Metamodel of a Fabric Network flattened to reflect communication-networking aspect of a blockchain
+
+% let's identify a channel in such context as a collection of organizations
+class Channel {
+    contains Organization[2..*] organizations
+}
+
+% trusted member of the network
+% enrolled via adding its MSP (Membership Service Provider) to the network
+class Organization {
+    % `contains` seems to imply *one*-to-one/many relationship, where the "contained" instance cannot be connected to exactly one container class instance
+    contains NetworkNode[1..*] organizationNodes
+    contains Router[1] organizationRouters
+}
+
+% computing instances located inside the logical bounds of a FabricNetwork
+% e.g. Peers & Orderers (as Orderer hosts cannot be managed by a network itself, an organization(s) shall maintain the ordering service instances)
+class NetworkNode.
+% computing instances located outside the logical bounds of a FabricNetwork
+% e.g. external Client Applications
+% class ExternalNode.
+
+% let's define logical topology of the blockchain communication network with nodes and routers only
+% (assuming sufficient communication capabilities between hosts of a single organization for now)
+class Router {
+    NetworkNode[0..*] connectedNode
+    Router[] connectedRouter
+}
+
+% define a constraint telling that routers cannot be connected to themselves
+error routerNonConnectivityToItself(Router r) <->
+    connectedRouter(r, r).
+
+% define a mesh topology for routers in the network,
+% i.e. router instances and their connections form a complete graph
+error routerMeshTopology(Router r1, Router r2) <->
+    !connectedRouter(r1, r2),
+    r1 != r2.
+
+% the below implementation of routerMesh results in unsatisfiable scope constraint for some reason I don't understand 
+% pred routerMesh(Router r1, Router r2) <->
+%     connectedRouter(r1, r2),
+%     r1 != r2.
+% routerMesh(*, *).
+
+% define a star topology, where the node of degree (|V| - 1) is the router connected to all of the nodes of its organization
+error routerStarTopology(Organization o, NetworkNode nn) <->
+    Router(r),
+    organizationRouters(o, r),
+    organizationNodes(o, nn),
+    !connectedNode(r, nn).
+
+% define a constraint telling that routers cannot connect to nodes outside of its organization
+error routerNonConnectivityToOutsideNodes(Router r, Organization o) <->
+    NetworkNode(nn),
+    !organizationNodes(o, nn),
+    organizationRouters(o, r),
+    connectedNode(r, nn).
+
+scope Channel = 1, Organization = 2, NetworkNode = 10.
+
